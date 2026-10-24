@@ -24,7 +24,8 @@ public class EmailGeneratorService {
     }
 
     public String generateEmailReply(EmailRequest emailRequest) {
-        if (geminiApiKey == null || geminiApiKey.trim().isEmpty()) {
+        String cleanApiKey = getCleanApiKey();
+        if (cleanApiKey == null || cleanApiKey.isEmpty()) {
             throw new IllegalArgumentException("Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable or gemini.api.key property in application.properties.");
         }
 
@@ -43,11 +44,11 @@ public class EmailGeneratorService {
         // Determine URL with API key
         String targetUrl;
         if (geminiApiUrl.contains("?key=")) {
-            targetUrl = geminiApiUrl + geminiApiKey;
+            targetUrl = geminiApiUrl + cleanApiKey;
         } else if (geminiApiUrl.contains("?")) {
-            targetUrl = geminiApiUrl + "&key=" + geminiApiKey;
+            targetUrl = geminiApiUrl + "&key=" + cleanApiKey;
         } else {
-            targetUrl = geminiApiUrl + "?key=" + geminiApiKey;
+            targetUrl = geminiApiUrl + "?key=" + cleanApiKey;
         }
 
         // Do request and get response
@@ -95,5 +96,23 @@ public class EmailGeneratorService {
         }
         prompt.append("\nOriginal email: \n").append(emailRequest.getEmailContent());
         return prompt.toString();
+    }
+
+    private String getCleanApiKey() {
+        if (geminiApiKey == null) {
+            return null;
+        }
+        String key = geminiApiKey.trim();
+        // Remove surrounding quotes if present
+        if ((key.startsWith("\"") && key.endsWith("\"")) || (key.startsWith("'") && key.endsWith("'"))) {
+            key = key.substring(1, key.length() - 1).trim();
+        }
+        // Remove common accidental prefixes
+        if (key.startsWith("GEMINI_API_KEY:")) {
+            key = key.substring("GEMINI_API_KEY:".length()).trim();
+        } else if (key.startsWith("GEMINI_API_KEY=")) {
+            key = key.substring("GEMINI_API_KEY=".length()).trim();
+        }
+        return key;
     }
 }
